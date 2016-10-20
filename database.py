@@ -27,12 +27,12 @@ class User(BaseModel):
     username = CharField(null=True)
     about = TextField(null=True)
     name = CharField(null=True)
-    email = CharField(unique=True)
+    email = CharField(unique=True, index=True)
     isAnonymous = BooleanField(default=False)
 
 class Forum(BaseModel):
     name = CharField(unique=True)
-    short_name = CharField(unique=True)
+    short_name = CharField(unique=True, index=True)
     user = ForeignKeyField(User, on_delete='CASCADE')
 
 class Thread(BaseModel):
