@@ -28,61 +28,23 @@ def user_json_by_email(email):
     return my_json(query.execute().next())
 
 def forum_json_by_short_name(short_name, related_user):
-    selected_fields = [Forum]
     query = Forum.select().where(Forum.short_name==short_name)
+    forum = my_json(query.dicts().execute().next())
     if related_user:
-        FollowUserAlias = FollowUser.alias()
-        selected_fields += [
-            User.id.alias('user__id'),
-            User.username.alias('user__username'),
-            User.about.alias('user__about'),
-            User.name.alias('user__name'),
-            User.email.alias('user__email'),
-            User.isAnonymous.alias('user__isAnonymous'),
-            fn.group_concat(SubscribeThread.thread).alias('user__subscriptions').coerce(False),
-            fn.group_concat(FollowUser.followee).alias('user__following'),
-            fn.group_concat(FollowUserAlias.follower).alias('user__followers')
-        ]
-        query = query.join(User, on=User.email==Forum.user)
-        query = query.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
-        query = query.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
-        query = query.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
-    query = query.select(*selected_fields)
-    return my_json(query.dicts().execute().next())
+        forum['user'] = user_json_by_email(forum['user'])
+    return forum
 
 
 def thread_json_by_query(query, related_user, related_forum):
-    selected_fields = [Thread]
-    if related_user:
-        FollowUserAlias = FollowUser.alias()
-        selected_fields += [
-            User.id.alias('user__id'),
-            User.username.alias('user__username'),
-            User.about.alias('user__about'),
-            User.name.alias('user__name'),
-            User.email.alias('user__email'),
-            User.isAnonymous.alias('user__isAnonymous'),
-            fn.group_concat(SubscribeThread.thread).alias('user__subscriptions').coerce(False),
-            fn.group_concat(FollowUser.followee).alias('user__following'),
-            fn.group_concat(FollowUserAlias.follower).alias('user__followers')
-        ]
-        query = query.join(User, on=User.email==Thread.user)
-        query = query.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
-        query = query.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
-        query = query.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
-
-    if related_forum:
-        selected_fields += [
-            Forum.id.alias('forum__id'),
-            Forum.name.alias('forum__name'),
-            Forum.short_name.alias('forum__short_name'),
-            Forum.user.alias('forum__user'),
-        ]
-        query = query.join(Forum, on=Forum.short_name==Thread.forum)
-
-    query = query.select(*selected_fields)
-    # raise Exception(query.sql())
-    return [my_json(i) for i in query.dicts().execute()]
+    result = []
+    for t in query.dicts().execute():
+        thread = my_json(t)
+        if related_user:
+            thread['user'] = user_json_by_email(thread['user'])
+        if related_forum:
+            thread['forum'] = forum_json_by_short_name(thread['forum'], False)
+        result.append(thread)
+    return result
 
 
 def thread_json_by_id(id, related_user, related_forum):
@@ -91,52 +53,17 @@ def thread_json_by_id(id, related_user, related_forum):
 
 
 def post_json_by_query(query, related_user, related_thread, related_forum):
-    selected_fields = [Post]
-    if related_user:
-        FollowUserAlias = FollowUser.alias()
-        selected_fields += [
-            User.id.alias('user__id'),
-            User.username.alias('user__username'),
-            User.about.alias('user__about'),
-            User.name.alias('user__name'),
-            User.email.alias('user__email'),
-            User.isAnonymous.alias('user__isAnonymous'),
-            fn.group_concat(SubscribeThread.thread).alias('user__subscriptions').coerce(False),
-            fn.group_concat(FollowUser.followee).alias('user__following'),
-            fn.group_concat(FollowUserAlias.follower).alias('user__followers')
-        ]
-        query = query.join(User, on=User.email==Post.user)
-        query = query.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
-        query = query.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
-        query = query.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
-
-    if related_thread:
-        selected_fields += [
-            Thread.id.alias('thread__id'),
-            Thread.forum.alias('thread__forum'),
-            Thread.title.alias('thread__title'),
-            Thread.isClosed.alias('thread__isClosed'),
-            Thread.user.alias('thread__user'),
-            Thread.date.alias('thread__date'),
-            Thread.message.alias('thread__message'),
-            Thread.slug.alias('thread__slug'),
-            Thread.isDeleted.alias('thread__isDeleted'),
-            Thread.likes.alias('thread__likes'),
-            Thread.dislikes.alias('thread__dislikes'),
-            Thread.points.alias('thread__points'),
-            Thread.posts.alias('thread__posts'),
-        ]
-        query = query.join(Thread, on=Thread.id==Post.thread)
-    if related_forum:
-        selected_fields += [
-            Forum.id.alias('forum__id'),
-            Forum.name.alias('forum__name'),
-            Forum.short_name.alias('forum__short_name'),
-            Forum.user.alias('forum__user'),
-        ]
-        query = query.join(Forum, on=Forum.short_name==Post.forum)
-    query = query.select(*selected_fields)
-    return [my_json(i) for i in query.dicts().execute()]
+    result = []
+    for p in query.dicts().execute():
+        post = my_json(p)
+        if related_user:
+            post['user'] = user_json_by_email(post['user'])
+        if related_thread:
+            post['thread'] = thread_json_by_id(post['thread'], False, False)
+        if related_forum:
+            post['forum'] = forum_json_by_short_name(post['forum'], False)
+        result.append(post)
+    return result
 
 def post_json_by_id(id, related_user, related_thread, related_forum):
     query = Post.select().where(Post.id==id)
