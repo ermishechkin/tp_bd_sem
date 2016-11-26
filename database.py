@@ -82,7 +82,7 @@ class FollowUser(BaseModel):
     class Meta:
         primary_key = CompositeKey('follower', 'followee')
         indexes = (
-            (('followee'), False),
+            (('followee', ), False),
         )
 
 class SubscribeThread(BaseModel):
