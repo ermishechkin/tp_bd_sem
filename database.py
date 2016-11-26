@@ -111,9 +111,6 @@ def recreate_db():
 
 def my_json(query, **kwargs):
     def change(t):
-        tmps = {}
-        dels = []
-
         for i in t:
             if type(t[i])==datetime:
                 t[i]=t[i].strftime('%Y-%m-%d %H:%M:%S')
@@ -133,17 +130,6 @@ def my_json(query, **kwargs):
                         if u != '':
                             r.append(int(u))
                 t[i] = r
-            if '__' in i:
-                node, child = i.split('__')
-                if node not in tmps:
-                    tmps[node] = {}
-                dels.append(i)
-                tmps[node][child] = t[i]
-        for i in dels:
-            del t[i]
-        for i in tmps:
-            t[i] = tmps[i]
-            change(t[i])
 
     res = { x:query[x] for x in query }
     change(res)
