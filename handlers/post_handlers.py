@@ -4,16 +4,14 @@ from common_handlers import normal_json, check_related
 from details import _forum_details, _thread_details, _user_details, _post_details
 from peewee import fn
 from database import my_json
+from detail2 import *
 
 @post('/db/api/post/create/')
 def post_create():
     data = request.json
-    data['user'] = User.get(User.email==data['user'])
-    data['forum'] = Forum.get(Forum.short_name==data['forum'])
     post, created = Post.create_or_get(**data)
-    result = post.json(recurse=False)
-    result['user'] = data['user'].email
-    result['forum'] = data['forum'].short_name
+    Thread.update(posts=Thread.posts+1).where(Thread.id==post.thread).execute()
+    result = post.json()
     return normal_json(result)
 
 @get('/db/api/post/details/')
@@ -23,23 +21,22 @@ def post_details():
     if not check_related(related, ['user', 'thread', 'forum']):
         return { "code": 3, "response": "Semantic error" }
     try:
-        post = Post.get(Post.id==data['post'])
-    except Post.DoesNotExist as e:
-        return { "code": 1, "response": "Post doesn't exists" }
-    return normal_json(_post_details(post, related))
+        result = post_json_by_id(data['post'], 'user' in related, 'thread' in related, 'forum' in related)
+    except Exception as e:
+        return { "code": 1, "response": "" }
+    else:
+        return normal_json(result)
 
 @get('/db/api/post/list/')
 def post_list():
     data = request.GET
-    query = Post.select(Post, (Post.likes-Post.dislikes).alias('points'))
+    query = Post.select()
     if 'forum' in data:
-        query = query.where(Post.forum==Forum.get(Forum.short_name==data['forum']))
+        query = query.where(Post.forum==data['forum'])
     elif 'thread' in data:
-        query = query.where(Post.thread_id==data['thread'])
+        query = query.where(Post.thread==data['thread'])
     else:
         return { "code": 3, "response": "Semantic error" }
-    query = query.annotate(User, User.email.alias('user'))
-    query = query.annotate(Forum, Forum.short_name.alias('forum'))
     query = query.dicts()
     if 'since' in data:
         query = query.where(Post.date>=data['since'])
@@ -58,48 +55,34 @@ def post_list():
 @post('/db/api/post/vote/')
 def post_vote():
     data = request.json
-    try:
-        post = Post.get(Post.id==data['post'])
-    except Post.DoesNotExist as e:
-        return { "code": 1, "response": "Post doesn't exists" }
     if data['vote'] not in [-1, 1]:
         return { "code": 3, "response": "Semantic error" }
     if data['vote'] == 1:
-        post.likes += 1
+        Post.update(likes=Post.likes+1, points=Post.points+1).where(Post.id==data['post']).execute()
     else:
-        post.dislikes += 1
-    post.save()
-    return normal_json(_post_details(post, []))
+        Post.update(dislikes=Post.likes+1, points=Post.points-1).where(Post.id==data['post']).execute()
+    result = post_json_by_id(data['post'], False, False, False)
+    return normal_json(result)
 
 @post('/db/api/post/remove/')
 def post_remove():
     data = request.json
-    try:
-        post = Post.get(Post.id==data['post'])
-    except Post.DoesNotExist as e:
-        return { "code": 1, "response": "Post doesn't exists" }
-    post.isDeleted = True
-    post.save()
-    return normal_json( {'post': post.id} )
+    Post.update(isDeleted = True).where(Post.id==data['post']).execute()
+    thread_id = Post.select(Post.thread).where(Post.id==data['post']).scalar()
+    Thread.update(posts=Thread.posts-1).where(Thread.id==thread_id).execute()
+    return normal_json( {'post': data['post']} )
 
 @post('/db/api/post/restore/')
 def post_restore():
     data = request.json
-    try:
-        post = Post.get(Post.id==data['post'])
-    except Post.DoesNotExist as e:
-        return { "code": 1, "response": "Post doesn't exists" }
-    post.isDeleted = False
-    post.save()
-    return normal_json( {'post': post.id} )
+    Post.update(isDeleted = False).where(Post.id==data['post']).execute()
+    thread_id = Post.select(Post.thread).where(Post.id==data['post']).scalar()
+    Thread.update(posts=Thread.posts+1).where(Thread.id==thread_id).execute()
+    return normal_json( {'post': data['post']} )
 
 @post('/db/api/post/update/')
 def post_update():
     data = request.json
-    try:
-        post = Post.get(Post.id==data['post'])
-    except Post.DoesNotExist as e:
-        return { "code": 1, "response": "Post doesn't exists" }
-    post.message = data['message']
-    post.save()
-    return normal_json(_post_details(post, []))
+    Post.update(message = data['message']).where(Post.id==data['post']).execute()
+    result = post_json_by_id(data['post'], False, False, False)
+    return normal_json(result)

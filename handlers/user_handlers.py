@@ -3,7 +3,8 @@ from database import User, Thread, FollowUser, SubscribeThread, Post, Forum
 from database import my_json
 from peewee import IntegrityError
 from common_handlers import normal_json
-from details import _user_details
+from peewee import fn, JOIN
+from detail2 import *
 
 @post('/db/api/user/create/')
 def user_create():
@@ -18,47 +19,38 @@ def user_create():
 @post('/db/api/user/updateProfile/')
 def user_updateProfile():
     data = request.json
-    user = User.select().where(User.email==data['user']).first()
-    user.name = data['name']
-    user.about = data['about']
-    user.save()
-    return normal_json(_user_details(user))
+    User.update(name = data['name'],
+                about = data['about']).where(User.email==data['user']).execute()
+    return normal_json(user_json_by_email(data['user']))
 
 @get('/db/api/user/details/')
 def user_details():
     data = request.GET
-    user = User.select().where(User.email==data['user']).first()
-    return normal_json(_user_details(user))
+    return normal_json(user_json_by_email(data['user']))
 
 @post('/db/api/user/follow/')
 def user_follow():
     data = request.json
-    follower = User.select().where(User.email==data['follower']).first()
-    followee = User.select().where(User.email==data['followee']).first()
-
-    follow, created = FollowUser.get_or_create(follower=follower,
-                                               followee=followee)
-    return normal_json(_user_details(follower))
+    follow, created = FollowUser.create_or_get(follower=data['follower'],
+                                               followee=data['followee'])
+    return normal_json(user_json_by_email(data['follower']))
 
 @post('/db/api/user/unfollow/')
 def user_unfollow():
     data = request.json
-    follower = User.get(User.email==data['follower'])
-    followee = User.get(User.email==data['followee'])
-
-    follow = FollowUser.delete().where(FollowUser.follower==follower,
-                                       FollowUser.followee==followee).execute()
-    return normal_json(_user_details(follower))
+    FollowUser.delete().where(FollowUser.follower==data['follower'],
+                              FollowUser.followee==data['followee']).execute()
+    return normal_json(user_json_by_email(data['follower']))
 
 @get('/db/api/user/listFollowers/')
 def user_listFollowers():
     data = request.GET
-    user = User.get(User.email==data['user'])
-    query = User.select().join(FollowUser, on=User.id==FollowUser.follower_id).\
-                 where(FollowUser.followee_id==user.id)
+    subquery = FollowUser.select(FollowUser.follower).where(FollowUser.followee==data['user'])
+    query = user_detail_impl()
+    query = query.where(User.email << subquery).group_by(User.id)
 
     if 'since_id' in data:
-        query = query.where(FollowUser.follower>=data['since_id'])
+        query = query.where(User.id >= data['since_id'])
 
     order = data['order'] if 'order' in data else 'desc'
     if order == 'desc':
@@ -69,19 +61,17 @@ def user_listFollowers():
     if 'limit' in data:
         query = query.limit(data['limit'])
 
-    followers = [_user_details(x) for x in query]
-    return normal_json(followers)
+    return normal_json([my_json(i) for i in query.dicts().execute()])
 
 @get('/db/api/user/listFollowing/')
 def user_listFollowing():
     data = request.GET
-    user = User.get(User.email==data['user'])
-
-    query = User.select().join(FollowUser, on=User.id==FollowUser.followee_id).\
-                 where(FollowUser.follower_id==user.id)
+    subquery = FollowUser.select(FollowUser.followee).where(FollowUser.follower==data['user'])
+    query = user_detail_impl()
+    query = query.where(User.email << subquery).group_by(User.id)
 
     if 'since_id' in data:
-        query = query.where(FollowUser.followee>=data['since_id'])
+        query = query.where(User.id >= data['since_id'])
 
     order = data['order'] if 'order' in data else 'desc'
     if order == 'desc':
@@ -92,16 +82,13 @@ def user_listFollowing():
     if 'limit' in data:
         query = query.limit(data['limit'])
 
-    followees = [_user_details(x) for x in query]
-    return normal_json(followees)
+    return normal_json([my_json(i) for i in query.dicts().execute()])
 
 @get('/db/api/user/listPosts/')
 def user_listPosts():
     data = request.GET
-    query = Post.select(Post, (Post.likes-Post.dislikes).alias('points'))
-    query = query.where(Post.user==User.get(User.email==data['user']))
-    query = query.annotate(User, User.email.alias('user'))
-    query = query.annotate(Forum, Forum.short_name.alias('forum'))
+    query = Post.select()
+    query = query.where(Post.user==data['user'])
     query = query.dicts()
     if 'since' in data:
         query = query.where(Post.date>=data['since'])

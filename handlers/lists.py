@@ -3,10 +3,8 @@ from database import my_json
 from peewee import fn
 
 def _post_list(root, limit=None):
-    query = Post.select(Post,(Post.likes-Post.dislikes).alias('points'))
-    query = query.where(Post.parent_id==root)
-    query = query.annotate(User, User.email.alias('user'))
-    query = query.annotate(Forum, Forum.short_name.alias('forum'))
+    query = Post.select()
+    query = query.where(Post.parent==root)
     query = query.order_by(+Post.date)
     if limit:
         query = query.limit(limit)
