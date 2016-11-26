@@ -8,15 +8,15 @@ def user_detail_impl():
     query = User.select()
 
     query = query.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
-    query = query.annotate(SubscribeThread, fn.group_concat(SubscribeThread.thread).alias('subscriptions').coerce(False))
+    query = query.annotate(SubscribeThread, fn.group_concat(fn.distinct(SubscribeThread.thread)).alias('subscriptions').coerce(False))
 
     query = query.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
-    query = query.annotate(FollowUser, fn.group_concat(FollowUser.followee).alias('following'))
+    query = query.annotate(FollowUser, fn.group_concat(fn.distinct(FollowUser.followee)).alias('following'))
 
     query = query.switch(User)
 
     query = query.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
-    query = query.annotate(FollowUserAlias, fn.group_concat(FollowUserAlias.follower).alias('followers'))
+    query = query.annotate(FollowUserAlias, fn.group_concat(fn.distinct(FollowUserAlias.follower)).alias('followers'))
 
     query = query.group_by()
 
