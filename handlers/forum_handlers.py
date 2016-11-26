@@ -76,21 +76,27 @@ def forum_listThreads():
 @get('/db/api/forum/listUsers/')
 def forum_listUsers():
     data = request.GET
-    query = user_detail_impl()
-    query = query.distinct()
-    query = query.join(Post, on=Post.user==User.email)
+    query = Post.select(User.id.alias('uid')).distinct().dicts()
     query = query.where(Post.forum==data['forum'])
+    query = query.join(User, on=User.email==Post.user)
+
     if 'since_id' in data:
-        query = query.where(User.id>=data['since_id'])
-    if 'limit' in data:
-        query = query.limit(data['limit'])
+        query = query.where(User.id >= data['since_id'])
+
     if 'order' not in data or data['order'] == 'desc':
-        query = query.order_by(-User.name)
+        sort_order = -User.name
     elif data['order'] == 'asc':
-        query = query.order_by(+User.name)
+        sort_order = +User.name
     else:
         return { "code": 3, "response": "Semantic error" }
-    query = query.where(User.email==Post.user)
-    query = query.group_by(User.id)
-    result = [my_json(i) for i in query.execute()]
+    query = query.order_by(sort_order)
+
+    if 'limit' in data:
+        query = query.limit(data['limit'])
+
+    result = []
+    for post in query.execute():
+        q_user = user_detail_impl().where(User.id==post['uid'])
+        user = my_json(q_user.execute().next())
+        result.append(user)
     return normal_json(result)
