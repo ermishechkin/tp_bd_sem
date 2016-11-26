@@ -17,8 +17,8 @@ class BaseModel(Model):
 class User(BaseModel):
     username = CharField(null=True)
     about = TextField(null=True)
-    name = CharField(null=True)
-    email = CharField(unique=True)
+    name = CharField(unique=True)
+    email = CharField(null=True)
     isAnonymous = BooleanField(default=False)
     class Meta:
         indexes = (
