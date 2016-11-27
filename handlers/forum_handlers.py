@@ -76,7 +76,7 @@ def forum_listThreads():
 @get('/db/api/forum/listUsers/')
 def forum_listUsers():
     data = request.GET
-    query = Post.select(User.id.alias('uid')).distinct().dicts()
+    query = Post.select(User).distinct().dicts()
     query = query.where(Post.forum==data['forum'])
     query = query.join(User, on=User.email==Post.user)
 
@@ -96,7 +96,15 @@ def forum_listUsers():
 
     result = []
     for post in query.execute():
-        q_user = user_detail_impl().where(User.id==post['uid'])
-        user = my_json(q_user.execute().next())
-        result.append(user)
+        FollowUserAlias = FollowUser.alias()
+
+        q = User.select(fn.group_concat(fn.distinct(SubscribeThread.thread)).alias('subscriptions').coerce(False),
+                        fn.group_concat(fn.distinct(FollowUser.followee)).alias('following'),
+                        fn.group_concat(fn.distinct(FollowUserAlias.follower)).alias('followers'))
+        q = q.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
+        q = q.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
+        q = q.switch(User)
+        q = q.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
+        q = q.group_by()
+        result.append(my_json(q.dicts.execute().next()))
     return normal_json(result)
