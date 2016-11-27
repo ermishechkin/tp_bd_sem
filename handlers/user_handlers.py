@@ -46,8 +46,8 @@ def user_unfollow():
 def user_listFollowers():
     data = request.GET
     subquery = FollowUser.select(FollowUser.follower).where(FollowUser.followee==data['user'])
-    query = user_detail_impl()
-    query = query.where(User.email << subquery).group_by(User.email)
+    query = User.select().dicts()
+    query = query.where(User.email << subquery)
 
     if 'since_id' in data:
         query = query.where(User.id >= data['since_id'])
@@ -61,14 +61,29 @@ def user_listFollowers():
     if 'limit' in data:
         query = query.limit(data['limit'])
 
-    return normal_json([my_json(i) for i in query.dicts().execute()])
+    result = []
+    for u in query.execute():
+        user = my_json(u)
+        subscriptions = SubscribeThread.select(SubscribeThread.thread).dicts()
+        subscriptions = subscriptions.where(SubscribeThread.subscriber==user['email'])
+        user['subscriptions'] = [i['thread'] for i in subscriptions]
+
+        following = FollowUser.select(FollowUser.followee).dicts()
+        following = following.where(FollowUser.follower==user['email'])
+        user['following'] = [i['followee'] for i in following]
+
+        followers = FollowUser.select(FollowUser.follower).dicts()
+        followers = followers.where(FollowUser.followee==user['email'])
+        user['followers'] = [i['follower'] for i in followers]
+        result.append(user)
+    return normal_json(result)
 
 @get('/db/api/user/listFollowing/')
 def user_listFollowing():
     data = request.GET
     subquery = FollowUser.select(FollowUser.followee).where(FollowUser.follower==data['user'])
-    query = user_detail_impl()
-    query = query.where(User.email << subquery).group_by(User.email)
+    query = User.select().dicts()
+    query = query.where(User.email << subquery)
 
     if 'since_id' in data:
         query = query.where(User.id >= data['since_id'])
@@ -82,7 +97,22 @@ def user_listFollowing():
     if 'limit' in data:
         query = query.limit(data['limit'])
 
-    return normal_json([my_json(i) for i in query.dicts().execute()])
+    result = []
+    for u in query.execute():
+        user = my_json(u)
+        subscriptions = SubscribeThread.select(SubscribeThread.thread).dicts()
+        subscriptions = subscriptions.where(SubscribeThread.subscriber==user['email'])
+        user['subscriptions'] = [i['thread'] for i in subscriptions]
+
+        following = FollowUser.select(FollowUser.followee).dicts()
+        following = following.where(FollowUser.follower==user['email'])
+        user['following'] = [i['followee'] for i in following]
+
+        followers = FollowUser.select(FollowUser.follower).dicts()
+        followers = followers.where(FollowUser.followee==user['email'])
+        user['followers'] = [i['follower'] for i in followers]
+        result.append(user)
+    return normal_json(result)
 
 @get('/db/api/user/listPosts/')
 def user_listPosts():
