@@ -1,10 +1,10 @@
 from peewee import CharField, BooleanField, ForeignKeyField, DateTimeField, TextField, CompositeKey, IntegerField
 from peewee import Model, DeleteQuery
-from peewee import MySQLDatabase
+from playhouse.pool import PooledMySQLDatabase
 from playhouse.shortcuts import model_to_dict
 from datetime import datetime
 from peewee import decimal
-database = MySQLDatabase('bd_sem', user='root', password='nefosp')
+database = PooledMySQLDatabase('bd_sem_check', user='root', password='nefosp')
 
 class BaseModel(Model):
     class Meta:
