@@ -47,7 +47,7 @@ def user_listFollowers():
     data = request.GET
     subquery = FollowUser.select(FollowUser.follower).where(FollowUser.followee==data['user'])
     query = user_detail_impl()
-    query = query.where(User.email << subquery).group_by(User.id)
+    query = query.where(User.email << subquery).group_by(User.email)
 
     if 'since_id' in data:
         query = query.where(User.id >= data['since_id'])
@@ -68,7 +68,7 @@ def user_listFollowing():
     data = request.GET
     subquery = FollowUser.select(FollowUser.followee).where(FollowUser.follower==data['user'])
     query = user_detail_impl()
-    query = query.where(User.email << subquery).group_by(User.id)
+    query = query.where(User.email << subquery).group_by(User.email)
 
     if 'since_id' in data:
         query = query.where(User.id >= data['since_id'])
