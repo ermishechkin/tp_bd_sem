@@ -23,9 +23,24 @@ def user_detail_impl():
     return query.dicts()
 
 def user_json_by_email(email):
-    query = user_detail_impl().where(User.email==email)
-    # raise Exception(query.sql())
-    return my_json(query.execute().next())
+    FollowUserAlias = FollowUser.alias()
+    query = User.select().dicts()
+    query = query.where(User.email==email)
+    user = my_json(query.execute().next())
+
+    subscriptions = SubscribeThread.select(SubscribeThread.thread).dicts()
+    subscriptions = subscriptions.where(SubscribeThread.subscriber==user['email'])
+    user['subscriptions'] = [i['thread'] for i in subscriptions]
+
+    following = FollowUser.select(FollowUser.followee).dicts()
+    following = following.where(FollowUser.follower==user['email'])
+    user['following'] = [i['followee'] for i in following]
+
+    followers = FollowUser.select(FollowUser.follower).dicts()
+    followers = followers.where(FollowUser.followee==user['email'])
+    user['followers'] = [i['follower'] for i in followers]
+
+    return user
 
 def forum_json_by_short_name(short_name, related_user):
     query = Forum.select().where(Forum.short_name==short_name)
