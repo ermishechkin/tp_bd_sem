@@ -101,7 +101,7 @@ def forum_listUsers():
         q = User.select(fn.group_concat(fn.distinct(SubscribeThread.thread)).alias('subscriptions').coerce(False),
                         fn.group_concat(fn.distinct(FollowUser.followee)).alias('following'),
                         fn.group_concat(fn.distinct(FollowUserAlias.follower)).alias('followers'))
-        q.where(User.email==user['email'])
+        q = q.where(User.email==user['email'])
         q = q.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
         q = q.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
         q = q.switch(User)
