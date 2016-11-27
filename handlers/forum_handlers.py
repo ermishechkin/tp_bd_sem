@@ -78,7 +78,7 @@ def forum_listUsers():
     data = request.GET
 
     subq = Post.select(Post.user).distinct().where(Post.forum==data['forum'])
-    query = User.select(User.email).where(User.email << subq).group_by(User.id)
+    query = User.select(User).where(User.email << subq).group_by(User.id)
     query = query.dicts()
 
     if 'since_id' in data:
@@ -97,6 +97,19 @@ def forum_listUsers():
 
     result = []
     for post in query.execute():
-        user = user_json_by_email(post['email'])
+        user = my_json(post)
+
+        subscriptions = SubscribeThread.select(SubscribeThread.thread).dicts()
+        subscriptions = subscriptions.where(SubscribeThread.subscriber==user['email'])
+        user['subscriptions'] = [i['thread'] for i in subscriptions]
+
+        following = FollowUser.select(FollowUser.followee).dicts()
+        following = following.where(FollowUser.follower==user['email'])
+        user['following'] = [i['followee'] for i in following]
+
+        followers = FollowUser.select(FollowUser.follower).dicts()
+        followers = followers.where(FollowUser.followee==user['email'])
+        user['followers'] = [i['follower'] for i in followers]
+
         result.append(user)
     return normal_json(result)
