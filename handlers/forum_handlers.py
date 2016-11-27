@@ -58,7 +58,6 @@ def forum_listThreads():
 
     query = Thread.select()
     query = query.where(Thread.forum==data['forum'])
-    query = query.group_by(Thread.id)
     if 'since' in data:
         query = query.where(Thread.date>=data['since'])
     if 'limit' in data:
@@ -78,7 +77,7 @@ def forum_listUsers():
     data = request.GET
 
     subq = Post.select(Post.user).distinct().where(Post.forum==data['forum'])
-    query = User.select(User).where(User.email << subq).group_by(User.id)
+    query = User.select(User).where(User.email << subq).group_by(User.email, User.id)
     query = query.dicts()
 
     if 'since_id' in data:
