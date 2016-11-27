@@ -18,7 +18,7 @@ def user_detail_impl():
     query = query.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
     query = query.annotate(FollowUserAlias, fn.group_concat(fn.distinct(FollowUserAlias.follower)).alias('followers'))
 
-    query = query.group_by()
+    query = query.group_by(User.email, User.id)
 
     return query.dicts()
 
