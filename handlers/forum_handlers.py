@@ -96,15 +96,17 @@ def forum_listUsers():
 
     result = []
     for post in query.execute():
+        user = my_json(post)
         FollowUserAlias = FollowUser.alias()
-
         q = User.select(fn.group_concat(fn.distinct(SubscribeThread.thread)).alias('subscriptions').coerce(False),
                         fn.group_concat(fn.distinct(FollowUser.followee)).alias('following'),
                         fn.group_concat(fn.distinct(FollowUserAlias.follower)).alias('followers'))
+        q.where(User.email==user['email'])
         q = q.join(SubscribeThread, JOIN.LEFT_OUTER, on=SubscribeThread.subscriber==User.email)
         q = q.join(FollowUser, JOIN.LEFT_OUTER, on=FollowUser.follower==User.email)
         q = q.switch(User)
         q = q.join(FollowUserAlias, JOIN.LEFT_OUTER, on=FollowUserAlias.followee==User.email)
         q = q.group_by()
-        result.append(my_json(q.dicts.execute().next()))
+        user.update(my_json(q.dicts().execute().next()))
+        result.append(user)
     return normal_json(result)
