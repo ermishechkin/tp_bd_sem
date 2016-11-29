@@ -21,7 +21,7 @@ def forum_details():
         return { "code": 3, "response": "Semantic error" }
     try:
         result = forum_json_by_short_name(data['forum'], 'user' in related)
-    except Exception as e:
+    except:
         return { "code": 1, "response": "" }
     else:
         return normal_json(result)

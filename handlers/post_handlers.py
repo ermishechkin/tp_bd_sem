@@ -22,7 +22,7 @@ def post_details():
         return { "code": 3, "response": "Semantic error" }
     try:
         result = post_json_by_id(data['post'], 'user' in related, 'thread' in related, 'forum' in related)
-    except Exception as e:
+    except:
         return { "code": 1, "response": "" }
     else:
         return normal_json(result)

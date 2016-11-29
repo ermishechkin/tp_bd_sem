@@ -26,7 +26,12 @@ def user_updateProfile():
 @get('/db/api/user/details/')
 def user_details():
     data = request.GET
-    return normal_json(user_json_by_email(data['user']))
+    try:
+        result = user_json_by_email(data['user'])
+    except:
+        return { "code": 1, "response": "" }
+    else:
+        return normal_json(result)
 
 @post('/db/api/user/follow/')
 def user_follow():

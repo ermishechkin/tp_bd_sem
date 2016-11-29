@@ -22,7 +22,7 @@ def thread_details():
         return { "code": 3, "response": "Semantic error" }
     try:
         result = thread_json_by_id(data['thread'], 'user' in related, 'forum' in related)
-    except Exception as e:
+    except:
         return { "code": 1, "response": "" }
     else:
         return normal_json(result)
