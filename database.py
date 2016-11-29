@@ -4,7 +4,7 @@ from playhouse.pool import PooledMySQLDatabase
 from playhouse.shortcuts import model_to_dict
 from datetime import datetime
 from peewee import decimal
-database = PooledMySQLDatabase('bd_sem_check', user='root', password='nefosp')
+database = PooledMySQLDatabase('bd_sem', user='root', password='nfs2378')
 
 class BaseModel(Model):
     class Meta:
@@ -17,16 +17,17 @@ class BaseModel(Model):
 class User(BaseModel):
     username = CharField(null=True)
     about = TextField(null=True)
-    name = CharField(unique=True)
-    email = CharField(null=True)
+    name = CharField(null=True)
+    email = CharField(unique=True)
     isAnonymous = BooleanField(default=False)
     class Meta:
         indexes = (
             (('email', 'id'), False),
+            (('name', 'email'), False),
         )
 
 class Forum(BaseModel):
-    name = CharField(unique=True)
+    name = CharField()
     short_name = CharField(unique=True, index=True)
     user = CharField()
 
@@ -73,6 +74,7 @@ class Post(BaseModel):
             (('forum', 'date'), False),
             (('thread', 'date'), False),
             (('user', 'forum'), False),
+            (('thread', 'parent', 'date'), False),
         )
 
 
