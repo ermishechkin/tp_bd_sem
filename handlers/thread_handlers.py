@@ -107,11 +107,16 @@ def thread_listPosts():
             else:
                 return { "code": 3, "response": "Semantic error" }
         res = []
+        left = data.get('limit')
+        left = int(left) if left is not None else None
         for x in query.execute():
+            if left == 0:
+                break
             res.append(my_json(x))
-            res += _post_list(x['id'])
-        if 'limit' in data:
-            res = res[:int(data['limit'])]
+            left = left-1 if left is not None else None
+            t = _post_list(x['id'], left)
+            res += t
+            left = left-len(t) if left is not None else None
 
     return normal_json(res)
 
