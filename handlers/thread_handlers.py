@@ -114,6 +114,8 @@ def thread_listPosts():
                 break
             res.append(my_json(x))
             left = left-1 if left is not None else None
+            if left == 0:
+                break
             t = _post_list(x['id'], left)
             res += t
             left = left-len(t) if left is not None else None

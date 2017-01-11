@@ -9,9 +9,17 @@ def _post_list(root, limit=None):
     if limit:
         query = query.limit(limit)
     query = query.dicts()
-
-    result = []
+    res = []
+    left = limit
     for x in query.execute():
-        result.append(my_json(x))
-        result += _post_list(x['id'])
-    return result
+        if left == 0:
+            break
+        res.append(my_json(x))
+        left = left-1 if left is not None else None
+        if left == 0:
+            break
+        t = _post_list(x['id'], left)
+        res += t
+        left = left-len(t) if left is not None else None
+    return res
+
