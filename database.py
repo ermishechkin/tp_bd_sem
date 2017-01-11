@@ -98,12 +98,7 @@ def init_db():
     database.create_tables([User,Thread,Forum,Post,FollowUser,SubscribeThread], safe=True)
 
 def clear_db():
-    DeleteQuery(User).execute()
-    DeleteQuery(Thread).execute()
-    DeleteQuery(Forum).execute()
-    DeleteQuery(Post).execute()
-    DeleteQuery(FollowUser).execute()
-    DeleteQuery(SubscribeThread).execute()
+    database.truncate_tables([User,Thread,Forum,Post,FollowUser,SubscribeThread])
 
 def recreate_db():
     database.drop_tables([User,Thread,Forum,Post,FollowUser,SubscribeThread])
